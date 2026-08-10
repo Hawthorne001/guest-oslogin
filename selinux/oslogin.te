@@ -1,13 +1,14 @@
 module oslogin 1.0;
 
 require {
+ attribute domain;
  attribute file_type;
  attribute non_security_file_type;
  type http_port_t;
  type sshd_t;
  type sshd_key_t;
  class tcp_socket name_connect;
- class file { create getattr setattr write open read unlink };
+ class file { create getattr setattr write open read unlink map };
  class dir { search write read remove_name add_name };
  class fifo_file { getattr open read };
 }
@@ -16,6 +17,39 @@ require {
 
 type google_t; # defined in oslogin.fc
 typeattribute google_t file_type, non_security_file_type;
+
+type google_oslogin_cache_t; # defined in oslogin.fc
+typeattribute google_oslogin_cache_t file_type, non_security_file_type;
+
+#============= cache file creation & type transitions ==============
+# Automatically label cache files created by systemd service (unconfined_service_t)
+# or manual admin execution (unconfined_t) in /etc as google_oslogin_cache_t.
+
+optional {
+    require {
+        type unconfined_service_t;
+        type etc_t;
+    }
+    type_transition unconfined_service_t etc_t:file google_oslogin_cache_t "oslogin_passwd.cache.bin";
+    type_transition unconfined_service_t etc_t:file google_oslogin_cache_t "oslogin_passwd.cache.bak";
+    type_transition unconfined_service_t etc_t:file google_oslogin_cache_t "oslogin_group.cache";
+    type_transition unconfined_service_t etc_t:file google_oslogin_cache_t "oslogin_group.cache.bak";
+}
+
+optional {
+    require {
+        type unconfined_t;
+        type etc_t;
+    }
+    type_transition unconfined_t etc_t:file google_oslogin_cache_t "oslogin_passwd.cache.bin";
+    type_transition unconfined_t etc_t:file google_oslogin_cache_t "oslogin_passwd.cache.bak";
+    type_transition unconfined_t etc_t:file google_oslogin_cache_t "oslogin_group.cache";
+    type_transition unconfined_t etc_t:file google_oslogin_cache_t "oslogin_group.cache.bak";
+}
+
+#============= read/map access for all processes ==============
+
+allow domain google_oslogin_cache_t:file { getattr open read map };
 
 #============= sshd_t (RHEL 7/8/9/10 legacy support) ==============
 
