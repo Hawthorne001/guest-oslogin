@@ -1303,9 +1303,10 @@ static bool ApplyPolicy(const char *user_name, string email, const char *policy,
   }
 
   if (http_code != 200) {
-    SysLogErr("Failed to validate that OS Login user %s has %s permission; "
-              "got HTTP response code: %lu; got HTTP response body: %s",
-              user_name, policy, http_code, response);
+    SysLogErr(
+        "Failed to validate that OS Login user %s has %s permission; "
+        "got HTTP response code: %lu; got HTTP response body: %s",
+        user_name, policy, http_code, response.c_str());
     return false;
   }
 
